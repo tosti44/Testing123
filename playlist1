@@ -1,0 +1,49 @@
+import os
+import json
+import requests
+from bs4 import BeautifulSoup
+import yt_dlp as youtube_dl
+
+def get_video_urls(playlist_url):
+    response = requests.get(playlist_url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    video_urls = []
+
+    # Example logic to extract video links from Pornhub playlist
+    for a in soup.find_all('a', href=True):
+        href = a['href']
+        if "/view_video.php?" in href and "phncdn.com" not in href:
+            video_url = "https://www.pornhub.com" + href
+            video_urls.append(video_url)
+    
+    return video_urls
+
+def download_video(video_url, download_path):
+    ydl_opts = {
+        'outtmpl': os.path.join(download_path, '%(title)s.%(ext)s'),
+        'quiet': True,  # Suppress output
+        'noplaylist': True,  # Ensure only single videos are downloaded
+        'restrictfilenames': True,  # Restrict filenames to be compatible with file systems
+        'postprocessors': [{'key': 'FFmpegVideoConvertor', 'preferedformat': 'mp4'}],  # Convert to mp4
+    }
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([video_url])
+    print(f"Downloaded: {video_url}")
+
+def load_downloaded_videos(file_path):
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            return json.load(file)
+    return []
+
+def save_downloaded_videos(file_path, downloaded_videos):
+    with open(file_path, 'w') as file:
+        json.dump(downloaded_videos, file)
+
+def main():
+    playlist_url = "https://www.pornhub.com/playlist/322184261"  # Replace with your actual playlist URL
+    download_path = "downloaded_videos"
+    downloaded_videos_file = "downloaded_videos.json"
+
+    # Ensure the download directory exists
+    if not os.path.exists(download_path):
